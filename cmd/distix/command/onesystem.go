@@ -44,24 +44,12 @@ func (r *OneSystemRunner) Run() error {
 		return err
 	}
 
-	doc, err := sysData.Convert2ProtobomDocument()
+	w, err := format.NewWriter(RootOpts.SbomType)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return err
 	}
-
-	w, err := format.NewProtobomWriter(doc, RootOpts.SbomType)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return err
-	}
-
-	if w.Write(RootOpts.OutputFile) != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return err
-	}
-
-	return nil
+	return w.WriteOneSystem(sysData, RootOpts.OutputFile)
 }
 
 

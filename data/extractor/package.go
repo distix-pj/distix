@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	rpm "github.com/sassoftware/go-rpmutils"
-	"github.com/distix-pj/distix/data"
 	"github.com/distix-pj/distix/data/model"
 )
 
@@ -16,14 +15,13 @@ type PkgExtractor struct {
 	PkgPath	string
 }
 
-// func NewPkgExtractor(pkgpath string) *PkgExtractor {
-func NewPkgExtractor(pkgpath string) data.Extractor {
+func NewPkgExtractor(pkgpath string) *PkgExtractor {
 	return &PkgExtractor{
 		PkgPath: pkgpath,
 	}
 }
 
-func (e *PkgExtractor) Extract() (data.SbomData, error) {
+func (e *PkgExtractor) Extract() (*model.Package, error) {
 	fd, err := os.Open(e.PkgPath)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -107,7 +105,7 @@ func (e *PkgExtractor) Extract() (data.SbomData, error) {
 		provideFiles[i] = provideFile
 	}
 
-	pkgSbomData := data.SbomData(&model.Package{
+	pkgSbomData := &model.Package{
 		PkgNevra: model.PackageNevra{
 			Name: pkgName,
 			Epoch: pkgEpoch,
@@ -120,7 +118,7 @@ func (e *PkgExtractor) Extract() (data.SbomData, error) {
 		Provides: rpmProvides,
 		Requires: rpmRequires,
 		Files: provideFiles,
-	})
+	}
 	return pkgSbomData, nil
 }
 

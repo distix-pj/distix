@@ -1,58 +1,26 @@
 package format
 
 import (
-	"io"
 	"fmt"
-	"log/slog"
+	"io"
 
-	"github.com/protobom/protobom/pkg/writer"
-	"github.com/protobom/protobom/pkg/formats"
-	"github.com/protobom/protobom/pkg/sbom"
+	"github.com/distix-pj/distix/data/model"
 )
 
-var protobomFormatMap = map[SbomType]formats.Format{
-	SbomType{SPDX, JSON}: formats.SPDX23JSON,
-	SbomType{CYCLONEDX, JSON}: formats.CDX16JSON,
+type Writer interface {
+	WritePackage(*model.Package, io.Writer) error
+	WriteOneSystem(*model.System, io.Writer) error
+	WriteDistSystem(*model.System, io.Writer) error
 }
 
-func IsSupportedByProtobom(sbomType SbomType) bool {
-	_, exists := protobomFormatMap[sbomType]
-	return exists
-}
-
-func ValidateForProtobom(sbomType SbomType) error {
-	if !IsSupportedByProtobom(sbomType) {
-		return fmt.Errorf("SbomType %+v is not supported by protobom format", sbomType)
+func NewWriter(sbomType SbomType) (Writer, error) {
+	switch sbomType.RecordType {
+	case SPDX:
+		return &SPDXWriter{fileFormat: sbomType.FileFormatType},nil
+	case CYCLONEDX:
+		return &CDXWriter{fileFormat: sbomType.FileFormatType},nil
+	default:
+		return nil, fmt.Errorf("unsupported SBOM record type: %s", sbomType.RecordType)
 	}
-	return nil
-}
-
-
-type ProtobomWriter struct {
-  doc *sbom.Document
-	sbomType SbomType
-}
-
-func NewProtobomWriter(doc *sbom.Document, sbomType SbomType) (*ProtobomWriter, error) {
-  if err := ValidateForProtobom(sbomType); err != nil {
-		return nil, err
-	}
-	return &ProtobomWriter{
-		doc: doc,
-		sbomType: sbomType,
-	}, nil
-}
-
-func (pw *ProtobomWriter) Write(outputFile io.Writer) error {
-	w := writer.New()
-	format := protobomFormatMap[pw.sbomType]
-
-	slog.Debug("Output SBOM",
-		"path:", outputFile,
-		"format:", pw.sbomType,
-	)
-	return w.WriteStreamWithOptions(
-		pw.doc, outputFile, &writer.Options{Format: format},
-	)
 }
 
