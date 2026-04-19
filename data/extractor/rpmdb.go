@@ -3,11 +3,9 @@ package extractor
 import (
 	"fmt"
 	"os"
-	// "errors"
 
 	rpmdb "github.com/knqyf263/go-rpmdb/pkg"
 
-	"github.com/distix-pj/distix/data"
 	"github.com/distix-pj/distix/data/model"
 )
 
@@ -16,13 +14,13 @@ type RpmdbExtractor struct {
 	RpmdbPath	string
 }
 
-func NewRpmdbExtractor(rpmdbpath string) data.Extractor {
+func NewRpmdbExtractor(rpmdbpath string) *RpmdbExtractor {
 	return &RpmdbExtractor{
 		RpmdbPath: rpmdbpath,
 	}
 }
 
-func (e *RpmdbExtractor) Extract() (data.SbomData, error) {
+func (e *RpmdbExtractor) Extract() (*model.System, error) {
 	db, err := rpmdb.Open(e.RpmdbPath)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -76,10 +74,10 @@ func (e *RpmdbExtractor) Extract() (data.SbomData, error) {
 		pkgs = append(pkgs, *pkgSbomData)
 	}
 
-	return data.SbomData(&model.System{
+	return &model.System{
 		HostName: "test hostname",
 		Packages: pkgs,
-	}), nil
+	}, nil
 }
 
 

@@ -9,10 +9,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/distix-pj/distix/data/extractor"
-	// "github.com/distix-pj/distix/data/model"
 	"github.com/distix-pj/distix/format"
 )
-
 
 type DistSystemRunner struct {
 	RpmDb string
@@ -42,35 +40,24 @@ func (r *DistSystemRunner) Run() error {
 		return err
 	}
 
-	doc, subdocs, err := sysData.Convert2MultiProtobomDocument()
+	w, err := format.NewWriter(RootOpts.SbomType)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return err
 	}
 
-	w, err := format.NewProtobomWriter(doc, RootOpts.SbomType)
-	if err != nil {
+	if err := w.WriteDistSystem(sysData, RootOpts.OutputFile); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return err
 	}
-	if w.Write(RootOpts.OutputFile) != nil {
-		fmt.Fprintln(os.Stderr, err)
-		return err
-	}
-
-	for i, subdoc := range subdocs {
-		wts, err := format.NewProtobomWriter(subdoc, RootOpts.SbomType)
-		if err != nil {
-			fmt.Fprintln(os.Stderr, err)
-			return err
-		}
+	for i, pkg := range sysData.Packages {
 		outputPath := filepath.Join(RootOpts.OutputSubDir, fmt.Sprintf("doc%v", i))
 		fd, err := os.Create(outputPath)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			return err
 		}
-		if wts.Write(fd) != nil {
+		if err := w.WritePackage(&pkg, fd); err != nil {
 			fmt.Fprintln(os.Stderr, err)
 			return err
 		}
