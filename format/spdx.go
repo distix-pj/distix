@@ -4,6 +4,7 @@ import (
 	"errors"
 	"io"
 	"fmt"
+	"time"
 
 	spdxv2_3 "github.com/spdx/tools-golang/spdx/v2/v2_3"
 	spdxcommon "github.com/spdx/tools-golang/spdx/v2/common"
@@ -65,6 +66,12 @@ func (w *SPDXWriter) WritePackage(pkg *model.Package, out io.Writer) error {
 		SPDXIdentifier:    "DOCUMENT",
 		DocumentName:      pkg.PkgNevra.GetNEVRA(),
 		DocumentNamespace: "https://distix.example.org/package/" + pkg.GetPurl(),
+		CreationInfo: &spdxv2_3.CreationInfo{
+			Created: time.Now().UTC().Format(time.RFC3339),
+			Creators: []spdxcommon.Creator{
+				{CreatorType: "Tool", Creator: "distix"},
+			},
+		},
 		Packages:          packages,
 		Relationships:     relationships,
 	}
