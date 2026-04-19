@@ -60,6 +60,29 @@ func (w *SPDXWriter) WritePackage(pkg *model.Package, out io.Writer) error {
 		})
 	}
 
+	files := []*spdxv2_3.File{}
+	for i, f := range pkg.Files {
+		fileID := spdxcommon.ElementID(fmt.Sprintf("SPDXRef-File-%d", i))
+		algo, err := toSPDXAlgorithm(f.DigestAlgorithm)
+		if err != nil {
+			return err
+		}
+
+		files = append(files, &spdxv2_3.File{
+			FileName: f.Name,
+			FileSPDXIdentifier: fileID,
+			Checksums: []spdxcommon.Checksum{{
+					Algorithm: algo,
+					Value: f.Digest,
+			}},
+		})
+		relationships = append(relationships, &spdxv2_3.Relationship{
+			RefA:         spdxcommon.DocElementID{ElementRefID: pkgElemID},
+			RefB:         spdxcommon.DocElementID{ElementRefID: fileID},
+			Relationship: "CONTAINS",
+		})
+	}
+
 	doc := &spdxv2_3.Document{
 		SPDXVersion:       "SPDX-2.3",
 		DataLicense:       "CC0-1.0",
@@ -74,6 +97,7 @@ func (w *SPDXWriter) WritePackage(pkg *model.Package, out io.Writer) error {
 		},
 		Packages:          packages,
 		Relationships:     relationships,
+		Files:             files,
 	}
 
 	return w.write(doc, out)
@@ -94,6 +118,29 @@ func (w *SPDXWriter) write(doc *spdxv2_3.Document, out io.Writer) error {
 		return spdxjson.Write(doc, out, spdxjson.Indent("\t"))
 	default:
 		return fmt.Errorf("SPDX file format %s is not yet supported", w.fileFormat)
+	}
+}
+
+
+func toSPDXAlgorithm(algo model.DigestAlgorithm) (spdxcommon.ChecksumAlgorithm, error) {
+	switch algo {
+	case model.DigestAlgorithmMD5:
+		return spdxcommon.MD5, nil
+	case model.DigestAlgorithmSHA1:
+		return spdxcommon.SHA1, nil
+	case model.DigestAlgorithmSHA256:
+		return spdxcommon.SHA256, nil
+	case model.DigestAlgorithmSHA384:
+		return spdxcommon.SHA384, nil
+	case model.DigestAlgorithmSHA512:
+		return spdxcommon.SHA512, nil
+	case model.DigestAlgorithmSHA224:
+		return spdxcommon.SHA224, nil
+	case model.DigestAlgorithmMD2:
+		return spdxcommon.MD2, nil
+	default:
+		// TODO: implement Stringer for human-readable algorithm names in error messages
+		return "", fmt.Errorf("unsupported digest algorithm: %d", algo)
 	}
 }
 

@@ -10,6 +10,8 @@ import (
 	"github.com/distix-pj/distix/data/model"
 )
 
+const S_ISDIR = 040000
+
 
 type PkgExtractor struct {
 	PkgPath	string
@@ -97,12 +99,27 @@ func (e *PkgExtractor) Extract() (*model.Package, error) {
 	}
 
 	filesInfo, err := pkg.Header.GetFiles()
-	provideFiles := make([]model.RpmFile, len(filesInfo))
-	for i, fileInfo := range filesInfo {
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return nil, err
+	}
+	algo, err := pkg.Header.GetInt(rpm.FILEDIGESTALGO)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return nil, err
+	}
+	digestAlgo := model.DigestAlgorithm(algo)
+	provideFiles := []model.RpmFile{}
+	for _, fileInfo := range filesInfo {
+		if fileInfo.Mode() &^ 07777 == S_ISDIR { // Skip directories; only regular files are relevant for SBOM file entries.
+			continue
+		}
 		provideFile := model.RpmFile{
 			Name: fileInfo.Name(),
+			Digest: fileInfo.Digest(),
+			DigestAlgorithm: digestAlgo,
 		}
-		provideFiles[i] = provideFile
+		provideFiles = append(provideFiles, provideFile)
 	}
 
 	pkgSbomData := &model.Package{
