@@ -44,6 +44,22 @@ func (w *SPDXWriter) WritePackage(pkg *model.Package, out io.Writer) error {
 		},
 	}
 
+	for i, prov := range pkg.Provides {
+		provID := spdxcommon.ElementID(fmt.Sprintf("SPDXRef-Prov-%d", i))
+		packages = append(packages, &spdxv2_3.Package{
+			PackageName:             prov.Name,
+			PackageVersion:          prov.Version,
+			PackageSPDXIdentifier:   provID,
+			PackageDownloadLocation: "NOASSERTION",
+			FilesAnalyzed:           false,
+		})
+		relationships = append(relationships, &spdxv2_3.Relationship{
+			RefA:         spdxcommon.DocElementID{ElementRefID: pkgElemID},
+			RefB:         spdxcommon.DocElementID{ElementRefID: provID},
+			Relationship: "CONTAINS",
+		})
+	}
+
 	for i, req := range pkg.Requires {
 		reqID := spdxcommon.ElementID(fmt.Sprintf("SPDXRef-Req-%d", i))
 		packages = append(packages, &spdxv2_3.Package{
