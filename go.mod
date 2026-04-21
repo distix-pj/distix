@@ -3,6 +3,7 @@ module github.com/distix-pj/distix
 go 1.24.0
 
 require (
+	github.com/CycloneDX/cyclonedx-go v0.10.0
 	github.com/knqyf263/go-rpmdb v0.1.1
 	github.com/sassoftware/go-rpmutils v0.4.0
 	github.com/spdx/tools-golang v0.5.5
@@ -23,7 +24,6 @@ require (
 	github.com/ncruces/go-strftime v0.1.9 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
-	github.com/stretchr/testify v1.10.0 // indirect
 	github.com/ulikunitz/xz v0.5.12 // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	golang.org/x/crypto v0.23.0 // indirect
