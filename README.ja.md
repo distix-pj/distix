@@ -31,6 +31,11 @@ $ go build
 $ ./distix --help
 ```
 
+5. or Build using our compose.yml on your docker/podman environment
+```
+$ podman compose run --rm build 
+```
+
 ## Type & Concept of SBOM distix generates
 
 distixは，いくつかの種類のSBOMを出力することができ，対応するサブコマンドが実装されています．

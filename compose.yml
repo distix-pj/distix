@@ -1,0 +1,14 @@
+services:
+  build:
+    image: golang:1.24
+    working_dir: /workspace
+    volumes:
+      - .:/workspace:z
+      - go-cache:/go/pkg/mod
+      - go-build-cache:/root/.cache/go-build
+    command: go build -o distix ./cmd/distix
+
+volumes:
+  go-cache:
+  go-build-cache:
+
