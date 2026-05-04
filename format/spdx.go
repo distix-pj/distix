@@ -120,7 +120,97 @@ func (w *SPDXWriter) WritePackage(pkg *model.Package, out io.Writer) error {
 }
 
 func (w *SPDXWriter) WriteOneSystem(sys *model.System, out io.Writer) error {
-	return errors.New("not implemented")
+	sysID := spdxcommon.ElementID("SPDXRef-System")
+	rpmPkgsID := spdxcommon.ElementID("SPDXRef-RPMPackages")
+	packages := []*spdxv2_3.Package{
+		{
+			PackageName:             sys.HostName,
+			PackageSPDXIdentifier:   sysID,
+			PackageDownloadLocation: "NOASSERTION",
+			FilesAnalyzed:           false,
+		},
+		{
+			PackageName:             "RPM-Packages",
+			PackageSPDXIdentifier:   rpmPkgsID,
+			PackageDownloadLocation: "NOASSERTION",
+			FilesAnalyzed:           false,
+		},
+	}
+	relationships := []*spdxv2_3.Relationship{
+		{
+			RefA:         spdxcommon.DocElementID{ElementRefID: "DOCUMENT"},
+			RefB:         spdxcommon.DocElementID{ElementRefID: sysID},
+			Relationship: "DESCRIBES",
+		},
+		{
+			RefA:         spdxcommon.DocElementID{ElementRefID: sysID},
+			RefB:         spdxcommon.DocElementID{ElementRefID: rpmPkgsID},
+			Relationship: "CONTAINS",
+		},
+	}
+
+	providerMap := map[string]spdxcommon.ElementID{}
+	for _, pkg := range sys.Packages {
+		pkgID := spdxcommon.ElementID(fmt.Sprintf("SPDXRef-Pkg-%s", pkg.GetPurl()))
+		for _, prov := range pkg.Provides {
+			providerMap[prov.Name] = pkgID
+		}
+
+		packages = append(packages, &spdxv2_3.Package{
+			PackageName:             pkg.PkgNevra.Name,
+			PackageVersion:          pkg.PkgNevra.Version,
+			PackageSPDXIdentifier:   pkgID,
+			PackageDownloadLocation: "NOASSERTION",
+			FilesAnalyzed:           false,
+			PackageExternalReferences: []*spdxv2_3.PackageExternalReference{
+				{
+					Category: "PACKAGE-MANAGER",
+					RefType:  "purl",
+					Locator:  pkg.GetPurl(),
+				},
+			},
+		})
+		relationships = append(relationships, &spdxv2_3.Relationship{
+			RefA:         spdxcommon.DocElementID{ElementRefID: rpmPkgsID},
+			RefB:         spdxcommon.DocElementID{ElementRefID: pkgID},
+			Relationship: "CONTAINS",
+		})
+	}
+
+	// TODO: https://github.com/distix-pj/distix/issues/14
+	for _, pkg := range sys.Packages {
+		pkgID := spdxcommon.ElementID(fmt.Sprintf("SPDXRef-Pkg-%s", pkg.GetPurl()))
+		for _, req := range pkg.Requires {
+			if reqID, ok := providerMap[req.Name]; ok {
+				relationships = append(relationships, &spdxv2_3.Relationship{
+					RefA:         spdxcommon.DocElementID{ElementRefID: pkgID},
+					RefB:         spdxcommon.DocElementID{ElementRefID: reqID},
+					Relationship: "DEPENDS_ON",
+				})
+			}
+			// else {
+			// }
+		}
+	}
+
+	doc := &spdxv2_3.Document{
+		SPDXVersion:       "SPDX-2.3",
+		DataLicense:       "CC0-1.0",
+		SPDXIdentifier:    "DOCUMENT",
+		DocumentName:      sys.HostName,
+		DocumentNamespace: "https://distix.example.org/package/" + sys.HostName,
+		CreationInfo: &spdxv2_3.CreationInfo{
+			Created: time.Now().UTC().Format(time.RFC3339),
+			Creators: []spdxcommon.Creator{
+				{CreatorType: "Tool", Creator: "distix"},
+			},
+		},
+		Packages:          packages,
+		Relationships:     relationships,
+		// Files:             files,
+	}
+
+	return w.write(doc, out)
 }
 
 func (w *SPDXWriter) WriteDistSystem(sys *model.System, out io.Writer) error {
