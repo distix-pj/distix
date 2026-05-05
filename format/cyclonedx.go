@@ -77,7 +77,60 @@ func (w *CDXWriter) WritePackage(pkg *model.Package, out io.Writer) error {
 }
 
 func (w *CDXWriter) WriteOneSystem(sys *model.System, out io.Writer) error {
-	return errors.New("not implemented")
+	sysComp := cdx.Component{
+		Type: cdx.ComponentTypeContainer,
+		Name: sys.HostName,
+		BOMRef: sys.HostName,
+	}
+	rpmPkgsComp := cdx.Component{
+		Type: cdx.ComponentTypeContainer,
+		Name: "RPM-Packages",
+		BOMRef: "RPM-Packages",
+	}
+
+	components := []cdx.Component{rpmPkgsComp}
+	deps := []cdx.Dependency{{Ref: sys.HostName, Dependencies: &[]string{"RPM-Packages"}}}
+
+	// TODO: https://github.com/distix-pj/distix/issues/14
+	providerMap := map[string]string{}
+	for _, pkg := range sys.Packages {
+		for _, prov := range pkg.Provides {
+			providerMap[prov.Name] = pkg.GetPurl()
+		}
+	}
+
+	rpmPkgsDeps := []string{}
+	for _, pkg := range sys.Packages {
+		components = append(components, cdx.Component{
+			Type: cdx.ComponentTypeLibrary,
+			Name: pkg.PkgNevra.Name,
+			Version: pkg.PkgNevra.Version,
+			PackageURL: pkg.GetPurl(),
+			BOMRef: pkg.GetPurl(),
+		})
+		rpmPkgsDeps = append(rpmPkgsDeps, pkg.GetPurl())
+	}
+	deps = append(deps, cdx.Dependency{Ref: "RPM-Packages", Dependencies: &rpmPkgsDeps})
+
+
+	for _, pkg := range sys.Packages {
+		pkgDeps := []string{}
+		for _, req := range pkg.Requires {
+			if provRef, ok := providerMap[req.Name]; ok {
+				pkgDeps = append(pkgDeps, provRef)
+			}
+		}
+		if len(pkgDeps) > 0 {
+			deps = append(deps, cdx.Dependency{Ref: pkg.GetPurl(), Dependencies: &pkgDeps})
+		}
+	}
+	
+	bom := cdx.NewBOM()
+	bom.Metadata = &cdx.Metadata{Component: &sysComp}
+	bom.Components = &components
+	bom.Dependencies = &deps
+
+	return w.encode(bom, out)
 }
 
 func (w *CDXWriter) WriteDistSystem(sys *model.System, out io.Writer) error {
