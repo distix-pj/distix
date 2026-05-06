@@ -5,6 +5,9 @@ import (
 	"io"
 
 	"github.com/distix-pj/distix/data/model"
+	"github.com/distix-pj/distix/format/cyclonedx"
+	"github.com/distix-pj/distix/format/spdx"
+	"github.com/distix-pj/distix/format/types"
 )
 
 type Writer interface {
@@ -13,12 +16,12 @@ type Writer interface {
 	WriteDistSystem(*model.System, io.Writer) error
 }
 
-func NewWriter(sbomType SbomType) (Writer, error) {
+func NewWriter(sbomType types.SbomType) (Writer, error) {
 	switch sbomType.RecordType {
-	case SPDX:
-		return &SPDXWriter{fileFormat: sbomType.FileFormatType},nil
-	case CYCLONEDX:
-		return &CDXWriter{fileFormat: sbomType.FileFormatType},nil
+	case types.SPDX:
+		return spdx.NewWriter(sbomType.FileFormatType),nil
+	case types.CYCLONEDX:
+		return cyclonedx.NewWriter(sbomType.FileFormatType),nil
 	default:
 		return nil, fmt.Errorf("unsupported SBOM record type: %s", sbomType.RecordType)
 	}

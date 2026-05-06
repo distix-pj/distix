@@ -1,4 +1,4 @@
-package format
+package types
 
 import (
 	"errors"
@@ -62,6 +62,7 @@ type SbomType struct {
 	FileFormatType SbomFileFormatType
 }
 
+// TODO: https://github.com/distix-pj/distix/issues/15
 var ValidSbomTypes = map[SbomRecordType][]SbomFileFormatType{
 	SPDX: {
 		JSON,

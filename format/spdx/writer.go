@@ -1,4 +1,4 @@
-package format
+package spdx
 
 import (
 	"errors"
@@ -11,11 +11,16 @@ import (
 	spdxjson "github.com/spdx/tools-golang/json"
 
 	"github.com/distix-pj/distix/data/model"
+	"github.com/distix-pj/distix/format/types"
 )
 
 type SPDXWriter struct {
-	fileFormat SbomFileFormatType
+	fileFormat types.SbomFileFormatType
 }
+func NewWriter(fileFormat types.SbomFileFormatType) *SPDXWriter {
+	return &SPDXWriter{fileFormat: fileFormat}
+}
+
 
 func (w *SPDXWriter) WritePackage(pkg *model.Package, out io.Writer) error {
 	pkgElemID := spdxcommon.ElementID("SPDXRef-Package")
@@ -220,7 +225,7 @@ func (w *SPDXWriter) WriteDistSystem(sys *model.System, out io.Writer) error {
 
 func (w *SPDXWriter) write(doc *spdxv2_3.Document, out io.Writer) error {
 	switch w.fileFormat {
-	case JSON:
+	case types.JSON:
 		return spdxjson.Write(doc, out, spdxjson.Indent("\t"))
 	default:
 		return fmt.Errorf("SPDX file format %s is not yet supported", w.fileFormat)
