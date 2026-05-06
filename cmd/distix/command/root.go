@@ -8,7 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/distix-pj/distix/format"
+	"github.com/distix-pj/distix/format/types"
 )
 
 var rootCmd *cobra.Command
@@ -16,7 +16,7 @@ var rootCmd *cobra.Command
 
 type RootRunner struct {
   Verbose bool
-	SbomType format.SbomType
+	SbomType types.SbomType
 	OutputFile io.Writer
 	OutputSubDir string
 }
@@ -73,7 +73,7 @@ func (r *RootRunner) Setup() error {
 func NewRootCmd() *cobra.Command {
 	runner := &RootRunner{
 		// Verbose: false,
-		SbomType: format.GetSbomTypeDefault(),
+		SbomType: types.GetSbomTypeDefault(),
 	}
 	RootOpts = runner
 	cmd := &cobra.Command{

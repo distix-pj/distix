@@ -1,4 +1,4 @@
-package format
+package cyclonedx
 
 import (
 	"errors"
@@ -8,10 +8,14 @@ import (
 	cdx "github.com/CycloneDX/cyclonedx-go"
 
 	"github.com/distix-pj/distix/data/model"
+	"github.com/distix-pj/distix/format/types"
 )
 
 type CDXWriter struct {
-	fileFormat SbomFileFormatType
+	fileFormat types.SbomFileFormatType
+}
+func NewWriter(fileFormat types.SbomFileFormatType) *CDXWriter {
+	return &CDXWriter{fileFormat: fileFormat}
 }
 
 func (w *CDXWriter) WritePackage(pkg *model.Package, out io.Writer) error {
@@ -140,7 +144,7 @@ func (w *CDXWriter) WriteDistSystem(sys *model.System, out io.Writer) error {
 func (w *CDXWriter) encode(bom *cdx.BOM, out io.Writer) error {
 	var format cdx.BOMFileFormat
 	switch w.fileFormat {
-	case JSON:
+	case types.JSON:
 		format = cdx.BOMFileFormatJSON
 	default:
 		return fmt.Errorf("CycloneDX file format %s is not supported", w.fileFormat)
