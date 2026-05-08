@@ -154,13 +154,8 @@ func (w *SPDXWriter) WriteOneSystem(sys *model.System, out io.Writer) error {
 		},
 	}
 
-	providerMap := map[string]spdxcommon.ElementID{}
 	for _, pkg := range sys.Packages {
 		pkgID := spdxcommon.ElementID(fmt.Sprintf("SPDXRef-Pkg-%s", pkg.GetPurl()))
-		for _, prov := range pkg.Provides {
-			providerMap[prov.Name] = pkgID
-		}
-
 		packages = append(packages, &spdxv2_3.Package{
 			PackageName:             pkg.PkgNevra.Name,
 			PackageVersion:          pkg.PkgNevra.Version,
@@ -182,20 +177,15 @@ func (w *SPDXWriter) WriteOneSystem(sys *model.System, out io.Writer) error {
 		})
 	}
 
-	// TODO: https://github.com/distix-pj/distix/issues/14
-	for _, pkg := range sys.Packages {
-		pkgID := spdxcommon.ElementID(fmt.Sprintf("SPDXRef-Pkg-%s", pkg.GetPurl()))
-		for _, req := range pkg.Requires {
-			if reqID, ok := providerMap[req.Name]; ok {
-				relationships = append(relationships, &spdxv2_3.Relationship{
-					RefA:         spdxcommon.DocElementID{ElementRefID: pkgID},
-					RefB:         spdxcommon.DocElementID{ElementRefID: reqID},
-					Relationship: "DEPENDS_ON",
-				})
-			}
-			// else {
-			// }
-		}
+	graph := sys.BuildDependencyGraph()
+	for _, dep := range graph.Dependencies() {
+		fromID := spdxcommon.ElementID(fmt.Sprintf("SPDXRef-Pkg-%s", dep.From.GetPurl()))
+		toID := spdxcommon.ElementID(fmt.Sprintf("SPDXRef-Pkg-%s", dep.To.GetPurl()))
+		relationships = append(relationships, &spdxv2_3.Relationship{
+			RefA: spdxcommon.DocElementID{ElementRefID: fromID},
+			RefB: spdxcommon.DocElementID{ElementRefID: toID},
+			Relationship: "DEPENDS_ON",
+		})
 	}
 
 	doc := &spdxv2_3.Document{
