@@ -14,8 +14,10 @@ import (
 
 type DistSystemRunner struct {
 	RpmDb string
+	OutputSubDir string
 }
 var distSysRpmDb string
+var outputSubDir string
 
 func (r *DistSystemRunner) Setup() error {
 	absRpmDbPath, err := filepath.Abs(distSysRpmDb)
@@ -25,9 +27,19 @@ func (r *DistSystemRunner) Setup() error {
 	}
 	r.RpmDb = absRpmDbPath
 
+	absOutputSubDir, err := filepath.Abs(outputSubDir)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(absOutputSubDir, 0755); err != nil {
+		return err
+	}
+	r.OutputSubDir = absOutputSubDir
+
 	slog.Debug("PackageRunner Options: ",
 		"options", r,
 		"RpmDb", distSysRpmDb,
+		"outputSubDir", outputSubDir,
 	)
 	return nil
 }
@@ -46,12 +58,12 @@ func (r *DistSystemRunner) Run() error {
 		return err
 	}
 
-	if err := w.WriteDistSystem(sysData, RootOpts.OutputFile); err != nil {
+	if err := w.WriteDistSystem(sysData, RootOpts.OutputFile, r.OutputSubDir); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		return err
 	}
 	for i, pkg := range sysData.Packages {
-		outputPath := filepath.Join(RootOpts.OutputSubDir, fmt.Sprintf("doc%v", i))
+		outputPath := filepath.Join(r.OutputSubDir, fmt.Sprintf("doc%v", i))
 		fd, err := os.Create(outputPath)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
@@ -81,6 +93,7 @@ func NewDistSystemCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&distSysRpmDb, "rpmdb", "r", DEF_RPMDB_PATH, "Path to target RPM Package")
+	cmd.Flags().StringVarP(&outputSubDir, "output-subdir", "O", "subcomps", "Output Sub Dir (required)")
 	return cmd
 }
 

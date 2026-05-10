@@ -208,7 +208,7 @@ func (w *SPDXWriter) WriteOneSystem(sys *model.System, out io.Writer) error {
 	return w.write(doc, out)
 }
 
-func (w *SPDXWriter) WriteDistSystem(sys *model.System, out io.Writer) error {
+func (w *SPDXWriter) WriteDistSystem(sys *model.System, out io.Writer, subdir string) error {
 	return errors.New("not implemented")
 }
 

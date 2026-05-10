@@ -125,7 +125,7 @@ func (w *CDXWriter) WriteOneSystem(sys *model.System, out io.Writer) error {
 	return w.encode(bom, out)
 }
 
-func (w *CDXWriter) WriteDistSystem(sys *model.System, out io.Writer) error {
+func (w *CDXWriter) WriteDistSystem(sys *model.System, out io.Writer, subdir string) error {
 	return errors.New("not implemented")
 }
 
