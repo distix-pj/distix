@@ -18,11 +18,9 @@ type RootRunner struct {
   Verbose bool
 	SbomType types.SbomType
 	OutputFile io.Writer
-	OutputSubDir string
 }
 var RootOpts *RootRunner
 var outputFile string = ""
-var outputSubDir string
 
 func (r *RootRunner) Setup() error {
 	loglevel := slog.LevelInfo
@@ -49,21 +47,11 @@ func (r *RootRunner) Setup() error {
 		r.OutputFile = file
 	}
 
-	absOutputSubDir, err := filepath.Abs(outputSubDir)
-	if err != nil {
-		return err
-	}
-	if err := os.MkdirAll(absOutputSubDir, 0755); err != nil {
-		return err
-	}
-	r.OutputSubDir = absOutputSubDir
-
 	slog.Debug("RootRunner Options",
 		"options", r,
 		"verbose", r.Verbose,
 		"sbomType", r.SbomType,
 		"outputFile", outputFile,
-		"outputSubDir", outputSubDir,
 	)
 
 	return nil
@@ -93,7 +81,6 @@ func NewRootCmd() *cobra.Command {
 	cmd.PersistentFlags().BoolVarP(&runner.Verbose, "verbose", "v", false, "Verbose message")
 	cmd.PersistentFlags().VarP(&runner.SbomType, "format-type", "", "Sbom Type")
 	cmd.PersistentFlags().StringVarP(&outputFile, "output-file", "o", "", "Output file (default stdout)")
-	cmd.PersistentFlags().StringVarP(&outputSubDir, "output-subdir", "O", "subcomps", "Output Sub Dir (required)")
 	return cmd
 }
 

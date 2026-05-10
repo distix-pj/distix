@@ -13,7 +13,7 @@ import (
 type Writer interface {
 	WritePackage(*model.Package, io.Writer) error
 	WriteOneSystem(*model.System, io.Writer) error
-	WriteDistSystem(*model.System, io.Writer) error
+	WriteDistSystem(*model.System, io.Writer, string) error
 }
 
 func NewWriter(sbomType types.SbomType) (Writer, error) {
