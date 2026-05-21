@@ -1,9 +1,9 @@
 package cyclonedx
 
 import (
-	"errors"
 	"fmt"
 	"io"
+	"path/filepath"
 
 	cdx "github.com/CycloneDX/cyclonedx-go"
 
@@ -126,7 +126,47 @@ func (w *CDXWriter) WriteOneSystem(sys *model.System, out io.Writer) error {
 }
 
 func (w *CDXWriter) WriteDistSystem(sys *model.System, out io.Writer, subdir string) error {
-	return errors.New("not implemented")
+	sysComp := cdx.Component{
+		Type: cdx.ComponentTypeContainer,
+		Name: sys.HostName,
+		BOMRef: sys.HostName,
+	}
+	rpmPkgsComp := cdx.Component{
+		Type: cdx.ComponentTypeContainer,
+		Name: "RPM-Packages",
+		BOMRef: "RPM-Packages",
+	}
+
+	components := []cdx.Component{rpmPkgsComp}
+	deps := []cdx.Dependency{{Ref: sys.HostName, Dependencies: &[]string{"RPM-Packages"}}}
+
+	rpmPkgsDeps := []string{}
+	for _, pkg := range sys.Packages {
+		pkgFilename := fmt.Sprintf("%s.cyclonedx.%s", pkg.PkgNevra.GetNEVRA(), w.fileFormat,)
+		pkgFileURI := "file://" + filepath.Join(subdir, pkgFilename)
+		components = append(components, cdx.Component{
+			Type: cdx.ComponentTypeLibrary,
+			Name: pkg.PkgNevra.Name,
+			Version: pkg.PkgNevra.Version,
+			PackageURL: pkg.GetPurl(),
+			BOMRef: pkg.GetPurl(),
+			ExternalReferences: &[]cdx.ExternalReference{
+				{
+					Type: cdx.ERTypeBOM,
+					URL: pkgFileURI,
+				},
+			},
+		})
+		rpmPkgsDeps = append(rpmPkgsDeps, pkg.GetPurl())
+	}
+	deps = append(deps, cdx.Dependency{Ref: "RPM-Packages", Dependencies: &rpmPkgsDeps})
+
+	bom := cdx.NewBOM()
+	bom.Metadata = &cdx.Metadata{Component: &sysComp}
+	bom.Components = &components
+	bom.Dependencies = &deps
+
+	return w.encode(bom, out)
 }
 
 func (w *CDXWriter) encode(bom *cdx.BOM, out io.Writer) error {
