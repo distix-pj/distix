@@ -1,9 +1,9 @@
 package spdx
 
 import (
-	"errors"
-	"io"
 	"fmt"
+	"io"
+	"path/filepath"
 	"time"
 
 	spdxv2_3 "github.com/spdx/tools-golang/spdx/v2/v2_3"
@@ -125,35 +125,7 @@ func (w *SPDXWriter) WritePackage(pkg *model.Package, out io.Writer) error {
 }
 
 func (w *SPDXWriter) WriteOneSystem(sys *model.System, out io.Writer) error {
-	sysID := spdxcommon.ElementID("SPDXRef-System")
-	rpmPkgsID := spdxcommon.ElementID("SPDXRef-RPMPackages")
-	packages := []*spdxv2_3.Package{
-		{
-			PackageName:             sys.HostName,
-			PackageSPDXIdentifier:   sysID,
-			PackageDownloadLocation: "NOASSERTION",
-			FilesAnalyzed:           false,
-		},
-		{
-			PackageName:             "RPM-Packages",
-			PackageSPDXIdentifier:   rpmPkgsID,
-			PackageDownloadLocation: "NOASSERTION",
-			FilesAnalyzed:           false,
-		},
-	}
-	relationships := []*spdxv2_3.Relationship{
-		{
-			RefA:         spdxcommon.DocElementID{ElementRefID: "DOCUMENT"},
-			RefB:         spdxcommon.DocElementID{ElementRefID: sysID},
-			Relationship: "DESCRIBES",
-		},
-		{
-			RefA:         spdxcommon.DocElementID{ElementRefID: sysID},
-			RefB:         spdxcommon.DocElementID{ElementRefID: rpmPkgsID},
-			Relationship: "CONTAINS",
-		},
-	}
-
+	packages, relationships, rpmPkgsID := buildSysBase(sys)
 	for _, pkg := range sys.Packages {
 		pkgID := spdxcommon.ElementID(fmt.Sprintf("SPDXRef-Pkg-%s", pkg.GetPurl()))
 		packages = append(packages, &spdxv2_3.Package{
@@ -193,7 +165,7 @@ func (w *SPDXWriter) WriteOneSystem(sys *model.System, out io.Writer) error {
 		DataLicense:       "CC0-1.0",
 		SPDXIdentifier:    "DOCUMENT",
 		DocumentName:      sys.HostName,
-		DocumentNamespace: "https://distix.example.org/package/" + sys.HostName,
+		DocumentNamespace: "https://distix.example.org/onesystem/" + sys.HostName,
 		CreationInfo: &spdxv2_3.CreationInfo{
 			Created: time.Now().UTC().Format(time.RFC3339),
 			Creators: []spdxcommon.Creator{
@@ -209,7 +181,59 @@ func (w *SPDXWriter) WriteOneSystem(sys *model.System, out io.Writer) error {
 }
 
 func (w *SPDXWriter) WriteDistSystem(sys *model.System, out io.Writer, subdir string) error {
-	return errors.New("not implemented")
+	packages, relationships, rpmPkgsID := buildSysBase(sys)
+	extDocRefs := []spdxv2_3.ExternalDocumentRef{}
+
+	for _, pkg := range sys.Packages {
+		pkgID := spdxcommon.ElementID(fmt.Sprintf("SPDXRef-Pkg-%s", pkg.GetPurl()))
+		pkgFilename := fmt.Sprintf("%s.spdx.%s", pkg.PkgNevra.GetNEVRA(), w.fileFormat,)
+		pkgFileURI := "file://" + filepath.Join(subdir, pkgFilename)
+
+		packages = append(packages, &spdxv2_3.Package{
+			PackageName:             pkg.PkgNevra.Name,
+			PackageVersion:          pkg.PkgNevra.Version,
+			PackageSPDXIdentifier:   pkgID,
+			PackageDownloadLocation: "NOASSERTION",
+			FilesAnalyzed:           false,
+			PackageExternalReferences: []*spdxv2_3.PackageExternalReference{
+				{
+					Category: "PACKAGE-MANAGER",
+					RefType:  "purl",
+					Locator:  pkg.GetPurl(),
+				},
+			},
+		})
+		relationships = append(relationships, &spdxv2_3.Relationship{
+			RefA:         spdxcommon.DocElementID{ElementRefID: rpmPkgsID},
+			RefB:         spdxcommon.DocElementID{ElementRefID: pkgID},
+			Relationship: "CONTAINS",
+		})
+		extDocRefs = append(extDocRefs, spdxv2_3.ExternalDocumentRef{
+			DocumentRefID: pkg.GetPurl(),
+			URI: pkgFileURI,
+			// Checksum: spdxcommon.Checksum{Algorithm: "", Value: ""},
+		})
+	}
+
+	doc := &spdxv2_3.Document{
+		SPDXVersion:       "SPDX-2.3",
+		DataLicense:       "CC0-1.0",
+		SPDXIdentifier:    "DOCUMENT",
+		DocumentName:      sys.HostName,
+		DocumentNamespace: "https://distix.example.org/distsystem/" + sys.HostName,
+		ExternalDocumentReferences: extDocRefs,
+		CreationInfo: &spdxv2_3.CreationInfo{
+			Created: time.Now().UTC().Format(time.RFC3339),
+			Creators: []spdxcommon.Creator{
+				{CreatorType: "Tool", Creator: "distix"},
+			},
+		},
+		Packages:          packages,
+		Relationships:     relationships,
+		// Files:             files,
+	}
+
+	return w.write(doc, out)
 }
 
 
@@ -243,5 +267,37 @@ func toSPDXAlgorithm(algo model.DigestAlgorithm) (spdxcommon.ChecksumAlgorithm, 
 		// TODO: implement Stringer for human-readable algorithm names in error messages
 		return "", fmt.Errorf("unsupported digest algorithm: %d", algo)
 	}
+}
+
+func buildSysBase(sys *model.System) ([]*spdxv2_3.Package, []*spdxv2_3.Relationship, spdxcommon.ElementID){
+	sysID := spdxcommon.ElementID("SPDXRef-System")
+	rpmPkgsID := spdxcommon.ElementID("SPDXRef-RPMPackages")
+	packages := []*spdxv2_3.Package{
+		{
+			PackageName:             sys.HostName,
+			PackageSPDXIdentifier:   sysID,
+			PackageDownloadLocation: "NOASSERTION",
+			FilesAnalyzed:           false,
+		},
+		{
+			PackageName:             "RPM-Packages",
+			PackageSPDXIdentifier:   rpmPkgsID,
+			PackageDownloadLocation: "NOASSERTION",
+			FilesAnalyzed:           false,
+		},
+	}
+	relationships := []*spdxv2_3.Relationship{
+		{
+			RefA:         spdxcommon.DocElementID{ElementRefID: "DOCUMENT"},
+			RefB:         spdxcommon.DocElementID{ElementRefID: sysID},
+			Relationship: "DESCRIBES",
+		},
+		{
+			RefA:         spdxcommon.DocElementID{ElementRefID: sysID},
+			RefB:         spdxcommon.DocElementID{ElementRefID: rpmPkgsID},
+			Relationship: "CONTAINS",
+		},
+	}
+	return packages, relationships, rpmPkgsID
 }
 

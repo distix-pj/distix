@@ -62,8 +62,14 @@ func (r *DistSystemRunner) Run() error {
 		fmt.Fprintln(os.Stderr, err)
 		return err
 	}
-	for i, pkg := range sysData.Packages {
-		outputPath := filepath.Join(r.OutputSubDir, fmt.Sprintf("doc%v", i))
+	for _, pkg := range sysData.Packages {
+		fileName := fmt.Sprintf(
+			"%s.%s.%s",
+			pkg.PkgNevra.GetNEVRA(),
+			RootOpts.SbomType.RecordType,
+			RootOpts.SbomType.FileFormatType,
+		)
+		outputPath := filepath.Join(r.OutputSubDir, fileName)
 		fd, err := os.Create(outputPath)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, err)
@@ -93,7 +99,7 @@ func NewDistSystemCmd() *cobra.Command {
 		},
 	}
 	cmd.Flags().StringVarP(&distSysRpmDb, "rpmdb", "r", DEF_RPMDB_PATH, "Path to target RPM Package")
-	cmd.Flags().StringVarP(&outputSubDir, "output-subdir", "O", "subcomps", "Output Sub Dir (required)")
+	cmd.Flags().StringVarP(&outputSubDir, "output-subdir", "O", "pkg-sboms", "Output Sub Dir (required)")
 	return cmd
 }
 

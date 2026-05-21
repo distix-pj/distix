@@ -115,6 +115,8 @@ func extractFilesFromPackageInfo(pkg *rpmdb.PackageInfo) ([]model.RpmFile, error
 	for i, file := range ffs {
 		provideFiles[i] = model.RpmFile{
 			Name: file.Path,
+			Digest: file.Digest,
+			DigestAlgorithm: model.DigestAlgorithm(pkg.DigestAlgorithm),
 		}
 	}
 	return provideFiles, nil
